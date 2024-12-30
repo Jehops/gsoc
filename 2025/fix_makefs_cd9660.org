@@ -1,0 +1,29 @@
+* Resolving Name Collisions in FreeBSD's makefs for ISO 9660 Images
+
+|----------------------+---------------------------------------------------|
+| Mentor               | Ed Maste <emaste@FreeBSD.org>                     |
+| Skills               | C (Intermediate), Filesystems (Beginner)          |
+| Mid-term Deliverable | Investigate and document existing name collisions |
+| Duration             | 175 hours                                         |
+| Difficulty           | Medium                                            |
+|----------------------+---------------------------------------------------|
+
+[[https://man.freebsd.org/cgi/man.cgi?query=makefs][makefs]] is a utility in the FreeBSD base system that creates file system images from a directory tree or an mtree manifest.  One of the file systems supported by makefs is [[https://en.wikipedia.org/wiki/ISO_9660][ISO 9660]] through FreeBSD's [[https://man.freebsd.org/cgi/man.cgi?query=cd9660&apropos=0&sektion=0&manpath=FreeBSD+14.2-RELEASE+and+Ports&arch=default&format=html][cd9660]] driver.
+
+The Rock Ridge ISO 9660 extensions improve compatibility with Unix-like systems by adding support for long filenames, symbolic links, file permissions, ownership, and device nodes.  To support Rock Ridge, FreeBSD's ISO 9660 data structures include additional metadata stored in special fields, allowing Unix systems to interpret this data while maintaining backward compatibility.
+
+makefs includes functionality to handle name collisions via the [[https://github.com/freebsd/freebsd-src/blob/main/usr.sbin/makefs/cd9660.c#L976-L1022][cd9660_handle_collisions()]] function, which renames conflicting entries using [[https://github.com/freebsd/freebsd-src/blob/1f31d437428014e864bcce1223cf7017180e2608/usr.sbin/makefs/cd9660.c#L1025-L1137][cd9660_rename_filename]]().  However, the current implementation sometimes produces images with unresolved conflicts for both file and directory names.
+
+This example highlights the issue:
+#+BEGIN_SRC sh
+$ mkdir -p test9660/this-is-a-directory-with-a-long-common-prefix-1 test9660/this-is-a-directory-with-a-long-common-prefix-2
+$ makefs -t cd9660 -o rockridge test.iso test9660/
+$ isoinfo -p -i test.iso
+Setting input-charset to 'UTF-8' from locale.
+Path table starts at block 18, size 86
+   1:    1 14
+   2:    1 15 THIS_IS_A_DIRECTORY_WITH_A_LON
+   3:    1 16 THIS_IS_A_DIRECTORY_WITH_A_LON
+#+END_SRC
+
+The goal of this project is to investigate and address these issues, ensuring that makefs produces ISO 9660 images without name collisions.  By improving makefs, this project will enhance FreeBSD's filesystem tools for users who create and test bootable ISO images.
